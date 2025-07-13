@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Adult Tube SEO Generator</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <h1>SEO Generator for Video Posts</h1>
+
+  <section id="single">
+    <h2>Single Input</h2>
+    <input id="title" type="text" placeholder="Post Title" /><br/>
+    <textarea id="embed" placeholder="Paste embed code"></textarea><br/>
+    <input id="duration" type="text" placeholder="Duration (MM:SS or HH:MM:SS)" /><br/>
+    <button onclick="generateOne()">Generate Output</button>
+    <pre id="outputSingle"></pre>
+  </section>
+
+  <section id="bulk">
+    <h2>Bulk CSV</h2>
+    <p>CSV columns: title,embed,duration</p>
+    <input type="file" id="csvInput" accept=".csv" />
+    <button onclick="generateCSV()">Process CSV & Download</button>
+  </section>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
