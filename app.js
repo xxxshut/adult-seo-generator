@@ -1,137 +1,82 @@
 
-// Helper to convert duration from HH:MM:SS or MM:SS to seconds
-function durationToSeconds(duration) {
-  const parts = duration.split(':').map(Number).reverse();
+function generateSlug(text) {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
+}
+
+function secondsFromDuration(duration) {
+  const parts = duration.split(":").map(Number).reverse();
   let seconds = 0;
-  if (parts[0]) seconds += parts[0];        // SS
-  if (parts[1]) seconds += parts[1] * 60;   // MM
-  if (parts[2]) seconds += parts[2] * 3600; // HH
+  if (parts.length >= 1) seconds += parts[0];
+  if (parts.length >= 2) seconds += parts[1] * 60;
+  if (parts.length === 3) seconds += parts[2] * 3600;
   return seconds;
 }
 
-// Generate SEO-friendly slug
-function slugify(text) {
-  return text
-    .toString()
-    .toLowerCase()
-    .replace(/\s+/g, '-')       
-    .replace(/[^\w\-]+/g, '')   
-    .replace(/\-\-+/g, '-')     
-    .replace(/^-+|-+$/g, '');   
-}
-
-// Generate SEO title (optional logic)
-function seoTitle(title) {
-  return title.trim();
-}
-
-// Generate SEO description
-function seoDescription(title, duration) {
-  return `${title} - Watch now in ${duration} duration on our tube site.`;
-}
-
-// Generate tags from title
-function extractTags(title) {
-  return title
-    .toLowerCase()
-    .replace(/[^\w\s]/g, '')
-    .split(/\s+/)
-    .filter(w => w.length > 2)
-    .slice(0, 10)
-    .join(',');
-}
-
-// Handle single input
 function generateOne() {
-  const title = document.getElementById('title').value.trim();
-  const embed = document.getElementById('embed').value.trim();
-  const durationRaw = document.getElementById('duration').value.trim();
-  const duration = durationToSeconds(durationRaw);
+  const title = document.getElementById("title").value.trim();
+  const embed = document.getElementById("embed").value.trim();
+  const duration = document.getElementById("duration").value.trim();
 
-  const slug = slugify(title);
-  const tags = extractTags(title);
-  const description = seoDescription(title, durationRaw);
+  const slug = generateSlug(title);
+  const durationSeconds = secondsFromDuration(duration);
+  const focusKeyword = title;
+  const description = `${title} - Watch now in full HD quality. Enjoy exclusive content, fast streaming, and mobile support.`;
+  const tags = title.split(" ").slice(0, 8).join(", ").toLowerCase();
 
   const output = {
-    post_title: seoTitle(title),
+    post_title: title,
     post_content: embed,
-    rank_math_focus_keyword: title,
+    rank_math_focus_keyword: focusKeyword,
     _wp_old_slug: slug,
     rank_math_description: description,
-    post_category: '',
+    post_category: "Uncategorized",
     post_tag: tags,
     embed: embed,
-    duration: duration,
-    post_status: 'draft'
+    duration: durationSeconds,
+    post_status: "draft"
   };
 
-  document.getElementById('outputSingle').textContent = JSON.stringify(output, null, 2);
+  document.getElementById("outputSingle").textContent = JSON.stringify(output, null, 2);
 }
 
-// Handle CSV
 function generateCSV() {
-  const input = document.getElementById('csvInput');
-  const file = input.files[0];
-  if (!file) return alert('Upload a CSV file');
+  const input = document.getElementById("csvInput");
+  if (!input.files.length) return alert("Please select a CSV file.");
 
   const reader = new FileReader();
   reader.onload = function (e) {
-    const lines = e.target.result.split('\n');
-    const headers = ['title', 'embed', 'duration'];
-    const output = [Object.keys(sampleOutput()).join(',')];
+    const lines = e.target.result.split("\n").filter(Boolean);
+    const headers = lines[0].split(",");
+    const rows = lines.slice(1);
 
-    for (let i = 1; i < lines.length; i++) {
-      const row = lines[i].split(',');
-      if (row.length < 3) continue;
+    const result = [headers.concat([
+      "rank_math_focus_keyword", "_wp_old_slug", "rank_math_description",
+      "post_category", "post_tag", "duration", "post_status"
+    ])];
 
-      const title = row[0].trim();
-      const embed = row[1].trim();
-      const durationRaw = row[2].trim();
-      const duration = durationToSeconds(durationRaw);
-      const slug = slugify(title);
-      const tags = extractTags(title);
-      const description = seoDescription(title, durationRaw);
+    rows.forEach(row => {
+      const cols = row.split(",");
+      const title = cols[0]?.trim() || "";
+      const embed = cols[1]?.trim() || "";
+      const duration = cols[2]?.trim() || "";
 
-      const post = {
-        post_title: seoTitle(title),
-        post_content: embed,
-        rank_math_focus_keyword: title,
-        _wp_old_slug: slug,
-        rank_math_description: description,
-        post_category: '',
-        post_tag: tags,
-        embed: embed,
-        duration: duration,
-        post_status: 'draft'
-      };
+      const slug = generateSlug(title);
+      const durationSeconds = secondsFromDuration(duration);
+      const description = `${title} - Watch now in full HD quality. Enjoy exclusive content, fast streaming, and mobile support.`;
+      const tags = title.split(" ").slice(0, 8).join(", ").toLowerCase();
 
-      output.push(Object.values(post).map(v => `"\${v}"`).join(','));
-    }
+      result.push(cols.concat([
+        title, slug, description, "Uncategorized", tags, durationSeconds, "draft"
+      ]));
+    });
 
-    downloadCSV(output.join('\n'), 'output.csv');
+    const csv = result.map(r => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "generated_seo.csv";
+    a.click();
   };
-  reader.readAsText(file);
-}
 
-function downloadCSV(csv, filename) {
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = filename;
-  link.click();
-}
-
-function sampleOutput() {
-  return {
-    post_title: '',
-    post_content: '',
-    rank_math_focus_keyword: '',
-    _wp_old_slug: '',
-    rank_math_description: '',
-    post_category: '',
-    post_tag: '',
-    embed: '',
-    duration: '',
-    post_status: ''
-  };
+  reader.readAsText(input.files[0]);
 }
